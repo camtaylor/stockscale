@@ -109,6 +109,24 @@ class SellStock(webapp2.RequestHandler):
     shares = float(self.request.get('shares'))
     latest_price = float(ystockquote.get_last_trade_price(ticker))
     trade_cost = shares * latest_price
+    stocks = Stock.all().filter('owner =', user.user_id())
+
+    def sell_stock(symbol, portfolio, user):
+      stocks_to_sell = portfolio.filter('symbol =', symbol)
+      total = 0
+      for stock in stocks_to_sell:
+        total += stock.price * stock.shares
+        stock.delete()
+      user.cash_balance += total
+      user.assets_balance -= total
+      user.put()
+    sell_stock(ticker, stocks, trade_account)
+    self.redirect('/')
+
+
+
+
+
 
 
 

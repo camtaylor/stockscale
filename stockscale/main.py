@@ -47,8 +47,7 @@ class StockHandler(webapp2.RequestHandler):
           account.cash_balance = 100000.0
           account.assets_balance = 0.0
           account.put()
-        user = users.get_current_user()
-        db.run_in_transaction(create_account())
+        create_account()
         self.redirect('/')
     else:
       self.redirect(users.create_login_url(self.request.uri))

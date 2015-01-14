@@ -4,26 +4,10 @@ from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 from google.appengine.api import users
 import ystockquote
+from models import User
+from models import Stock
 
 """GAE application to simulate stock trading"""
-
-class Stock(db.Model):
-  """Model of a stock, owner property for its associated user"""
-  owner = db.StringProperty()
-  symbol = db.StringProperty()
-  price = db.FloatProperty()
-  shares = db.IntegerProperty()
-  company_name = db.StringProperty()
-  purchase_price = db.FloatProperty()
-  change = db.FloatProperty()
-
-class User(db.Model):
-  """user entity contains balances an a unique id, user_key"""
-  user_key = db.StringProperty()
-  name = db.StringProperty()
-  cash_balance = db.FloatProperty()
-  assets_balance = db.FloatProperty()
-  asset_change = db.FloatProperty()
 
 class StockHandler(webapp2.RequestHandler):
   def get(self):

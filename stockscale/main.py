@@ -1,17 +1,14 @@
 import cgi
-import os
-import urllib
 import webapp2
-import logging
-from google.appengine.api import taskqueue
 from google.appengine.ext import db
 from google.appengine.ext.webapp import template
-from time import time
-from google.appengine.ext import deferred
 from google.appengine.api import users
 import ystockquote
 
+"""GAE application to simulate stock trading"""
+
 class Stock(db.Model):
+  """Model of a stock, owner property for its associated user"""
   owner = db.StringProperty()
   symbol = db.StringProperty()
   price = db.FloatProperty()
@@ -21,29 +18,32 @@ class Stock(db.Model):
   change = db.FloatProperty()
 
 class User(db.Model):
+  """user entity contains balances an a unique id, user_key"""
   user_key = db.StringProperty()
   name = db.StringProperty()
   cash_balance = db.FloatProperty()
   assets_balance = db.FloatProperty()
   asset_change = db.FloatProperty()
- 
+
 class StockHandler(webapp2.RequestHandler):
   def get(self):
-
+    """checks for user account from users api"""
     user = users.get_current_user()
     if user:
       registered_account = User.all().filter('user_key =', user.user_id()).count()
+      #checks if account for user exists
       if registered_account > 0:
         logout = users.create_logout_url('/')
-        q = Stock.all().filter('owner =', user.user_id())
-        u = User.all().filter('user_key =', user.user_id()).get()
+        stocks = Stock.all().filter('owner =', user.user_id())
+        user = User.all().filter('user_key =', user.user_id()).get()
         self.response.out.write(template.render('main.html',
-                                                {'stocks': q, 'user':u, 'logout':logout}))
+                                                {'stocks': stocks, 'user':user, 'logout':logout}))
       else:
         def create_account():
+          """creates a user entity"""
           user = users.get_current_user()
           account = User(key_name=user.user_id())
-          account.user_key= user.user_id()
+          account.user_key = user.user_id()
           account.name = user.nickname()
           account.cash_balance = 100000.0
           account.assets_balance = 0.0
@@ -56,6 +56,7 @@ class StockHandler(webapp2.RequestHandler):
 
 
 class NewStock(webapp2.RequestHandler):
+  """called when the user wants to buy a stock"""
   def post(self):
     user = users.get_current_user()
     trade_account = User.all().filter('user_key =', user.user_id()).get()
@@ -63,7 +64,7 @@ class NewStock(webapp2.RequestHandler):
     shares = float(self.request.get('shares'))
     latest_price = float(ystockquote.get_last_trade_price(ticker))
     trade_cost = shares * latest_price
-    
+    #checks that user has enough money to buy
     if trade_cost < trade_account.cash_balance:
       xg_on = db.create_transaction_options(xg=True)
       def buy_stock():
@@ -89,7 +90,9 @@ class NewStock(webapp2.RequestHandler):
 
 
 class UpdatePrices(webapp2.RequestHandler):
+  """updates stocks with latest trade price"""
   def post(self):
+    """gets new user and updates portfolio"""
     user_id = users.get_current_user().user_id()
     stocks = Stock.all().filter('owner =', user_id)
     total = 0.0
@@ -112,12 +115,10 @@ class SellStock(webapp2.RequestHandler):
     user = users.get_current_user()
     trade_account = User.all().filter('user_key =', user.user_id()).get()
     ticker = cgi.escape(self.request.get('stock'))
-    shares = float(self.request.get('shares'))
-    latest_price = float(ystockquote.get_last_trade_price(ticker))
-    trade_cost = shares * latest_price
     stocks = Stock.all().filter('owner =', user.user_id())
 
-    def sell_stock(symbol, portfolio, shares_to_sell, user):
+    def sell_stock(symbol, portfolio, user):
+      """sells all stock of a certain type and updates user balances"""
       stocks_to_sell = portfolio.filter('symbol =', symbol)
       total = 0.0
       for stock in stocks_to_sell:
@@ -126,7 +127,7 @@ class SellStock(webapp2.RequestHandler):
       user.cash_balance += total
       user.assets_balance -= total
       user.put()
-    sell_stock(ticker, stocks, shares, trade_account)
+    sell_stock(ticker, stocks, trade_account)
     self.redirect('/')
 
 app = webapp2.WSGIApplication([

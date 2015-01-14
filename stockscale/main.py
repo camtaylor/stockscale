@@ -25,6 +25,7 @@ class User(db.Model):
   name = db.StringProperty()
   cash_balance = db.FloatProperty()
   assets_balance = db.FloatProperty()
+  asset_change = db.FloatProperty()
  
 class StockHandler(webapp2.RequestHandler):
   def get(self):
@@ -46,6 +47,7 @@ class StockHandler(webapp2.RequestHandler):
           account.name = user.nickname()
           account.cash_balance = 100000.0
           account.assets_balance = 0.0
+          account.asset_change = 0.0
           account.put()
         create_account()
         self.redirect('/')
@@ -91,13 +93,16 @@ class UpdatePrices(webapp2.RequestHandler):
     user_id = users.get_current_user().user_id()
     stocks = Stock.all().filter('owner =', user_id)
     total = 0.0
+    total_change = 0.0
     if stocks.count() != 0:
       for stock in stocks:
         stock.price = float(ystockquote.get_last_trade_price(stock.symbol))
         stock.change = stock.price - stock.purchase_price
         total += stock.price * stock.shares
+        total_change += stock.shares * stock.change
         stock.put()
     account = User.all().filter('user_key =', user_id).get()
+    account.asset_change = total_change
     account.assets_balance = total
     account.put()
     self.redirect('/')
@@ -121,7 +126,7 @@ class SellStock(webapp2.RequestHandler):
       user.cash_balance += total
       user.assets_balance -= total
       user.put()
-    sell_stock(ticker, stocks, shares_to_sell, trade_account)
+    sell_stock(ticker, stocks, shares, trade_account)
     self.redirect('/')
 
 app = webapp2.WSGIApplication([

@@ -90,12 +90,13 @@ class UpdatePrices(webapp2.RequestHandler):
   def post(self):
     user_id = users.get_current_user().user_id()
     stocks = Stock.all().filter('owner =', user_id)
-    total = 0
-    for stock in stocks:
-      stock.price = float(ystockquote.get_last_trade_price(stock.symbol))
-      stock.change = stock.price - stock.purchase_price
-      total += stock.price * stock.shares
-      stock.put()
+    total = 0.0
+    if stocks.count() != 0:
+      for stock in stocks:
+        stock.price = float(ystockquote.get_last_trade_price(stock.symbol))
+        stock.change = stock.price - stock.purchase_price
+        total += stock.price * stock.shares
+        stock.put()
     account = User.all().filter('user_key =', user_id).get()
     account.assets_balance = total
     account.put()
@@ -111,26 +112,17 @@ class SellStock(webapp2.RequestHandler):
     trade_cost = shares * latest_price
     stocks = Stock.all().filter('owner =', user.user_id())
 
-    def sell_stock(symbol, portfolio, user):
+    def sell_stock(symbol, portfolio, shares_to_sell, user):
       stocks_to_sell = portfolio.filter('symbol =', symbol)
-      total = 0
+      total = 0.0
       for stock in stocks_to_sell:
         total += stock.price * stock.shares
         stock.delete()
       user.cash_balance += total
       user.assets_balance -= total
       user.put()
-    sell_stock(ticker, stocks, trade_account)
+    sell_stock(ticker, stocks, shares_to_sell, trade_account)
     self.redirect('/')
-
-
-
-
-
-
-
-
-
 
 app = webapp2.WSGIApplication([
     ('/', StockHandler),
@@ -138,13 +130,3 @@ app = webapp2.WSGIApplication([
     ('/updateprices', UpdatePrices),
     ('/sellstock', SellStock)
 ], debug=True)
-
-def main():
-  # Set the logging level in the main function
-  # See the section on Requests and App Caching for information on how
-  # App Engine reuses your request handlers when you specify a main function
-  logging.getLogger().setLevel(logging.DEBUG)
-  webapp.util.run_wsgi_app(application)
-
-if __name__ == '__main__':
-  main()

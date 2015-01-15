@@ -114,9 +114,27 @@ class SellStock(webapp2.RequestHandler):
     sell_stock(ticker, stocks, trade_account)
     self.redirect('/')
 
+class StockSearch(webapp2.RequestHandler):
+  """displays information for a given stock"""
+  def get(self):
+    """checks for user account from users api"""
+    user = users.get_current_user()
+    logout = users.create_logout_url('/')
+    user = User.all().filter('user_key =', user.user_id()).get()
+    symbol = cgi.escape(self.request.get('search'))
+    stock_data = ystockquote.get_all(symbol)
+    company_name = ystockquote.get_company_name(symbol)
+    
+    self.response.out.write(template.render('stock.html',
+                          {'user':user, 'logout':logout, 'symbol':symbol,
+                            'company':company_name, 'data':stock_data}))
+
+
+
 app = webapp2.WSGIApplication([
     ('/', StockHandler),
     ('/addstock', NewStock),
     ('/updateprices', UpdatePrices),
-    ('/sellstock', SellStock)
+    ('/sellstock', SellStock),
+    ('/stocksearch', StockSearch)
 ], debug=True)

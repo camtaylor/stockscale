@@ -42,9 +42,17 @@
     </nav>
       <div class="container">
         <div class="page-header">
-          <h1>{{symbol}} <small>{{company}}</small></h1>
+          <h1>{{symbol}}<small>  {{company}}</small>
+             <small><span class="label label-primary">Price:   {{data}}</span></small>
+             <small>
+               {% if change > 0 %}
+                 <span class="label label-success">+{{change}}</span>
+               {% else %}
+                 <span class="label label-danger">{{change}}</span>
+               {% endif %}
+             </small>
+          </h1>
         </div>
-        
       </div>
     </body>
 </html>

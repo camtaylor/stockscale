@@ -49,7 +49,7 @@ class NewStock(webapp2.RequestHandler):
     latest_price = float(ystockquote.get_last_trade_price(ticker))
     trade_cost = shares * latest_price
     #checks that user has enough money to buy
-    if trade_cost < trade_account.cash_balance:
+    if trade_cost < trade_account.cash_balance and len(ticker) > 0:
       xg_on = db.create_transaction_options(xg=True)
       def buy_stock():
         #invalid ticker symbols return 0, check for valid symbol
@@ -121,13 +121,14 @@ class StockSearch(webapp2.RequestHandler):
     user = users.get_current_user()
     logout = users.create_logout_url('/')
     user = User.all().filter('user_key =', user.user_id()).get()
-    symbol = cgi.escape(self.request.get('search'))
-    stock_data = ystockquote.get_all(symbol)
+    symbol = cgi.escape(self.request.get('search')).upper()
+    stock_data = ystockquote.get_last_trade_price(symbol)
+    change = float(ystockquote.get_change(symbol))
     company_name = ystockquote.get_company_name(symbol)
     
     self.response.out.write(template.render('stock.html',
                           {'user':user, 'logout':logout, 'symbol':symbol,
-                            'company':company_name, 'data':stock_data}))
+                            'company':company_name, 'data':stock_data, 'change':change}))
 
 
 
